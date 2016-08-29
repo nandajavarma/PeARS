@@ -28,9 +28,7 @@ def get_pear_data(pear):
     # generic picture
     profile.append("./static/pi-pic.png")
 
-    pear_data.append(profile)
-
-    return pear_data
+    return profile
 
 
 @print_timing

@@ -35,8 +35,6 @@ def scoreURL(query, url_dict):
 def getUrlDict(pear):
     """ Get URL-vector dict """
     url_dict = {}
-    if pear.endswith('/'):
-        pear = pear[:-1]
     doc_dists = open(pear + "/urls.dists.txt")
     for l in doc_dists:
         l = l.rstrip('\n')
@@ -125,6 +123,8 @@ def runScript(query, query_dist, pears):
     all_pears_doc_scores = {}  # Document scores
     all_url_wordclouds = {}
     for pear in pears:
+        if pear.endswith('/'):
+            pear = pear[:-1]
         wc = loadWordClouds(pear)
         for k, v in wc.items():
             all_url_wordclouds[k] = v

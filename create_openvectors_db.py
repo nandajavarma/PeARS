@@ -3,8 +3,8 @@
 
 import os
 
-from app import db
-from app.models import OpenVectors
+from pears import db
+from pears.models import OpenVectors
 
 
 def create_openvectors_db():

@@ -1,4 +1,4 @@
-from app import db
+from pears import db
 
 
 class OpenVectors(db.Model):
