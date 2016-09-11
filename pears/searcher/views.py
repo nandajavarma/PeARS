@@ -3,14 +3,15 @@
 
 from flask import render_template, request, Blueprint
 
+from . import searcher
+
 from pears import best_pears
 from pears import scorePages
 from pears.utils import read_pears, query_distribution, load_entropies
 
-mod = Blueprint('main', __name__)
 
-@mod.route('/')
-@mod.route('/index')
+@searcher.route('/')
+@searcher.route('/index')
 def index():
     pages = []
     entropies_dict = load_entropies()

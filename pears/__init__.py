@@ -7,8 +7,7 @@ app = Flask(__name__)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 
-from pears import models
+from pears import models, searcher, indexer
 
-from pears.views import main
-
-app.register_blueprint(main.mod)
+app.register_blueprint(searcher.searcher)
+app.register_blueprint(indexer.indexer)
