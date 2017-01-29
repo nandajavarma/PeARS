@@ -12,6 +12,7 @@ from pears import db
 import socket
 import math
 import numpy
+from ast import literal_eval
 
 from overlap_calculation import score_url_overlap, generic_overlap
 from .utils import query_distribution, cosine_similarity, print_timing
@@ -66,20 +67,20 @@ def scoreDocs(query, query_dist, pear_urls):
     URL_scores = scoreURL(query, pear_urls)
     title_scores = scoreTitles(query, pear_urls)
     for val in pear_urls:
-      v = val['url']
-      if v in DS_scores and v in URL_scores:
-        url_bonus = 0
-        title_bonus = 0
-        if URL_scores[v] > 0.7:
-          url_bonus = URL_scores[v] * 0.2
-        if title_scores[v] > 0.7:
-          title_bonus = title_scores[v] * 0.2
-        if DS_scores[v] > 0.2:
-          document_scores[v] = DS_scores[v] + url_bonus + title_bonus  # Boost DS score by a maximum of 0.2
-        else:
-          document_scores[v] = DS_scores[v]
-        if math.isnan(document_scores[v]):  # Check for potential NaN -- messes up with sorting in bestURLs.
-          document_scores[v] = 0
+        v = val['url']
+        if v in DS_scores and v in URL_scores:
+            url_bonus = 0
+            title_bonus = 0
+            if URL_scores[v] > 0.7:
+                url_bonus = URL_scores[v] * 0.2
+            if title_scores[v] > 0.7:
+                title_bonus = title_scores[v] * 0.2
+            if DS_scores[v] > 0.2:
+                document_scores[v] = DS_scores[v] + url_bonus + title_bonus  # Boost DS score by a maximum of 0.2
+            else:
+                document_scores[v] = DS_scores[v]
+            if math.isnan(document_scores[v]):  # Check for potential NaN -- messes up with sorting in bestURLs.
+                document_scores[v] = 0
     return document_scores, wordclouds, titles
 
 
@@ -127,7 +128,8 @@ def get_pear_urls(ip):
         urls = Urls.query.all()
         return [u.__dict__ for u in urls]
     else:
-        return requests.get("http://{}:5000/api/urls".format(ip)).text
+        return literal_eval(requests.get(
+            "http://{}:5000/api/urls".format(ip)).text)
 
 def runScript(query, query_dist, pears):
     url_wordclouds = {}

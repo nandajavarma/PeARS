@@ -23,10 +23,14 @@ def get_result_from_dht(query_dist):
     #print "Checking dht..."
     #return False
     query_key = dht.lsh(query_dist)
-    print query_key
     result = dht.getValue(node, query_key)
-    print result
-    return result
+    if result.result:
+        return result.result
+    else:
+        try:
+            my_ip = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
+        except:
+            my_ip = ["0.0.0.0"]
 
 def get_cached_urls(urls):
   urls_with_cache = urls

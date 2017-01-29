@@ -35,7 +35,7 @@ def get_dht_value():
     vector = (Profile.query.all()[0]).vector
     peer_profile = np.array(filter(None, [float(j) for j in
         vector.split(' ')]))
-    KEY = str(dht.lsh(peer_profile))
+    KEY = dht.lsh(peer_profile)
     try:
         VALUE = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
     except:
