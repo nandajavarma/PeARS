@@ -6,6 +6,8 @@ import re
 from flask import render_template, request, Blueprint
 import requests, json, urllib2, urllib
 from ast import literal_eval
+from dht import dht
+from pears import node
 
 from . import searcher
 
@@ -20,16 +22,10 @@ root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 def get_result_from_dht(query_dist):
     #print "Checking dht..."
     #return False
-    url = 'http://localhost:8080'
-    headers = {'content-type': 'application/json', 'Accept-Charset':
-            'UTF-8', 'Connection': 'close'}
-    query_str  = ' '.join([each.strip('\n\[\]') for each in str(query_dist).split(' ')])
-    try:
-        r = requests.post(url, data=json.dumps(query_str), headers=headers)
-        body = r.text.split('\n')[-1] if r else ''
-        result = body.strip('\'\[\] \t\r').split(',')
-    except:
-        result = []
+    query_key = dht.lsh(query_dist)
+    print query_key
+    result = dht.getValue(node, query_key)
+    print result
     return result
 
 def get_cached_urls(urls):
