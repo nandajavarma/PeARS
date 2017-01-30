@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 from pears import app, db
-from pears import node
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from dht import dht
-from pears.models import Profile
-import numpy as np
 import sys, os
 import urllib
 from twisted.web.server import Site
 from twisted.web.wsgi import WSGIResource
+import ConfigParser
 
 
 def create_profile():
@@ -18,7 +16,7 @@ def parse_args(args):
     arg = dht.parse_arguments(args)
     port = arg.udp_port
     if arg.known_ip and arg.known_port:
-        known_nodes = [(arg.known_ip, int(arg.known_port))]
+        known_nodes = [(arg.known_ip, arg.known_port)]
     elif arg.config_file:
         known_nodes = []
         f = open(arg.config_file, 'r')
@@ -26,44 +24,38 @@ def parse_args(args):
         f.close()
         for line in lines:
             ip_address, udp_port = line.split()
-            known_nodes.append((ip_address, int(udp_port)))
+            known_nodes.append((ip_address, udp_port))
     else:
-        known_nodes = None
+        known_nodes = []
     return port, known_nodes
 
-def get_dht_value():
-    vector = (Profile.query.all()[0]).vector
-    peer_profile = np.array(filter(None, [float(j) for j in
-        vector.split(' ')]))
-    KEY = dht.lsh(peer_profile)
-    try:
-        VALUE = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
-    except:
-        print "Unable to connect to the network. Setting up locally...\n"
-        VALUE = "0.0.0.0"
-    return KEY, VALUE
+
+def storeresult(result):
+    config.node = result
 
 def main(args):
     port, known_nodes = parse_args(args)
+    known_nodes = filter(None, known_nodes)
+    config = ConfigParser.ConfigParser(allow_no_value=True)
+    nodefile =  os.path.join(os.getcwd(), 'dht.nodes')
+    with open(nodefile, 'w') as f:
+        config.add_section('port')
+        config.set('port', str(port))
+        if known_nodes:
+            config.add_section('known_nodes')
+            for (k,v) in known_nodes:
+                config.set('known_nodes', str(k), str(v))
+        config.write(f)
 
 
-
-    KEY, VALUE = get_dht_value()
-    node.joinNetwork(known_nodes)
-    reactor.callLater(0, dht.storeValue, KEY, VALUE, node)
-    reactor.addSystemEventTrigger('before','shutdown', dht.cleanup, KEY,
-            node)
-
-    print "  * Starting the DHT in port {}".format(port)
     print "  * Running PeARS instance on http://0.0.0.0:5000/ (Press CTRL+C to quit)"
 
 if __name__ == "__main__":
     create_profile()
-    main(sys.argv)
-    flask_app = WSGIResource(reactor, reactor.getThreadPool(),
-            app)
+    flask_app = WSGIResource(reactor, reactor.getThreadPool(), app)
     flask_site = Site(flask_app)
     reactor.listenTCP(5000, flask_site)
+    main(sys.argv)
     reactor.run()
 
 

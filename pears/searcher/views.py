@@ -7,21 +7,20 @@ from flask import render_template, request, Blueprint
 import requests, json, urllib2, urllib
 from ast import literal_eval
 from dht import dht
-from pears import node
+import ConfigParser
 
 from . import searcher
 
-from pears import best_pears
-from pears import scorePages
 from pears.utils import read_pears, query_distribution, load_entropies, print_timing
+from pears import best_pears, scorePages, app, db
+from pears.models import Profile
+node = None
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
 @print_timing
-def get_result_from_dht(query_dist):
-    #print "Checking dht..."
-    #return False
+def get_result_from_dht(node, query_dist):
     query_key = dht.lsh(query_dist)
     result = dht.getValue(node, query_key)
     if result.result:
@@ -31,6 +30,7 @@ def get_result_from_dht(query_dist):
             my_ip = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
         except:
             my_ip = ["0.0.0.0"]
+        return my_ip
 
 def get_cached_urls(urls):
   urls_with_cache = urls
@@ -42,12 +42,34 @@ def get_cached_urls(urls):
       u.append(u[0])
   return urls_with_cache
 
+def create_dht_node():
+    nodefile =  os.path.join(os.getcwd(), 'dht.nodes')
+    config = ConfigParser.ConfigParser(allow_no_value=True)
+    config.read(nodefile)
+    try:
+        port = int(config.items('port')[0][0])
+    except:
+        print "Error: Port information missing"
+        sys.exit()
+    try:
+        known_nodes = config.items('known_nodes')
+        known_nodes = [(k, int(v)) for (k, v) in known_nodes]
+    except:
+        known_nodes = []
+
+    print "  * Starting the DHT in port {}".format(port)
+    ret = dht.bootstrap_dht(port, known_nodes)
+    return ret
+
 @searcher.route('/')
 @searcher.route('/index')
 def index():
+    global node
     results = []
     entropies_dict = load_entropies()
     query = request.args.get('q')
+    if not node:
+        node = create_dht_node()
     if not query:
         return render_template("index.html")
     else:
@@ -56,7 +78,7 @@ def index():
         pear_details = []
         results = []
         if query_dist.size:
-            pears = get_result_from_dht(query_dist)
+            pears = get_result_from_dht(node, query_dist)
             pear_profiles = read_pears(pears)
             pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
             pear_ips = pear_details.keys()

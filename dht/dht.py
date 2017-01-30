@@ -1,26 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os, re
-import requests
-from io import StringIO
-import cStringIO
-import argparse, socket, urllib
-import numpy, math
+import os
+import argparse, urllib
+import numpy
 from twisted.internet import reactor
 from common_vars import alpha, beta, W
 from entangled.node import EntangledNode
-from entangled.kademlia.datastore import SQLiteDataStore
-from twisted.internet.protocol import Factory, Protocol
-import  subprocess
+from entangled.kademlia.datastore import DictDataStore
 from pears.models import Profile
+import numpy as np
 
-def storeValue(key, value, node):
-    """ Stores the specified value in the DHT using the specified key """
-    print '\nStoring value; Key: %s, Value: %s' % (key, value)
-    # Store the value in the DHT. This method returns a Twisted Deferred result, which we then add callbacks to
-    deferredResult = node.iterativeStore(key, value)
-    return deferredResult
 
 def genericErrorCallback(failure):
     """ Callback function that is invoked if an error occurs during any of the DHT operations """
@@ -38,18 +28,20 @@ def getValue(node, key):
     print '\nRetrieving value from DHT for key "%s"...' % key
     deferredResult = node.iterativeFindValue(key)
     # Add a callback to this result; this will be called as soon as the operation has completed
-    deferredResult.addCallback(getValueCallback, node=node, key=key)
+    deferredResult.addCallback(getValueCallback, key=key)
     # As before, add the generic error callback
     deferredResult.addErrback(genericErrorCallback)
     return deferredResult
 
 
-def getValueCallback(result, node, key):
+def getValueCallback(result, key):
     """ Callback function that is invoked when the getValue() operation succeeds """
     if type(result) == dict:
         IPs = result.values()
+        print 'Value successfully retrieved: %s' % IPs
     else:
         IPs = "0.0.0.0"
+    return IPs
 
 def lsh(vector):
     alpha.seek(0)
@@ -104,3 +96,26 @@ def parse_arguments(args=None):
                 "function as a self-contained DHT (until another node "\
                 "contacts it).\n"
     return args
+
+def get_dht_value():
+    vector = (Profile.query.all()[0]).vector
+    vector = vector.strip('[]\n\t\r')
+    peer_profile = np.array([np.float64(j) for j in vector.split(' ')])
+    KEY = lsh(peer_profile)
+    try:
+        VALUE = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
+    except:
+        print "Unable to connect to the network. Setting up locally...\n"
+        VALUE = "0.0.0.0"
+    return KEY, VALUE
+
+def bootstrap_dht(port, known_nodes):
+    if os.path.isfile('/tmp/dbFile%s.db' % port):
+        os.remove('/tmp/dbFile%s.db' % port)
+    data_store = DictDataStore()
+    node = EntangledNode(udpPort=int(port), dataStore=data_store)
+    KEY, VALUE = get_dht_value()
+    node.joinNetwork(known_nodes)
+    node.iterativeStore(KEY, VALUE)
+    reactor.addSystemEventTrigger('before','shutdown', cleanup, KEY, node)
+    return node
