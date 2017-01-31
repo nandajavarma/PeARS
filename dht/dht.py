@@ -4,10 +4,11 @@
 import os
 import argparse, urllib
 import numpy
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from common_vars import alpha, beta, W
 from entangled.node import EntangledNode
 from entangled.kademlia.datastore import DictDataStore
+from entangled.kademlia.contact import Contact
 from pears.models import Profile
 import numpy as np
 
@@ -36,11 +37,15 @@ def getValue(node, key):
 
 def getValueCallback(result, key):
     """ Callback function that is invoked when the getValue() operation succeeds """
+    IPs = []
     if type(result) == dict:
         IPs = result.values()
-        print 'Value successfully retrieved: %s' % IPs
-    else:
-        IPs = "0.0.0.0"
+    elif type(result) == list:
+        for cont in result:
+            if type(cont) == Contact:
+                IPs.append(cont.address)#, cont.port))
+    IPs = "0.0.0.0" if not IPs else IPs
+    print 'Value successfully retrieved: %s' % IPs
     return IPs
 
 def lsh(vector):

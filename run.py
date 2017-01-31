@@ -33,7 +33,7 @@ def parse_args(args):
 def storeresult(result):
     config.node = result
 
-def main(args):
+def main(args, tcp_port):
     port, known_nodes = parse_args(args)
     known_nodes = filter(None, known_nodes)
     config = ConfigParser.ConfigParser(allow_no_value=True)
@@ -48,14 +48,18 @@ def main(args):
         config.write(f)
 
 
-    print "  * Running PeARS instance on http://0.0.0.0:5000/ (Press CTRL+C to quit)"
+    print "  * Running PeARS instance on http://0.0.0.0:{}/ (Press " \
+                                        "CTRL+C to quit)".format(tcp_port)
 
 if __name__ == "__main__":
+    tcp_port = 5000
     create_profile()
     flask_app = WSGIResource(reactor, reactor.getThreadPool(), app)
     flask_site = Site(flask_app)
-    reactor.listenTCP(5000, flask_site)
-    main(sys.argv)
+    reactor.listenTCP(tcp_port, flask_site)
+    client = app.test_client()
+    reactor.callLater(0, client.get, '/index')
+    main(sys.argv, tcp_port)
     reactor.run()
 
 

@@ -15,16 +15,22 @@ from pears.utils import read_pears, query_distribution, load_entropies, print_ti
 from pears import best_pears, scorePages, app, db
 from pears.models import Profile
 node = None
-
+result_v = None
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
+def printresult(result):
+    global result_v
+    result_v = result
+
 @print_timing
 def get_result_from_dht(node, query_dist):
+    global result_v
     query_key = dht.lsh(query_dist)
-    result = dht.getValue(node, query_key)
-    if result.result:
-        return result.result
+    deferred = dht.getValue(node, query_key)
+    deferred.addCallback(printresult)
+    if result_v:
+        return result_v
     else:
         try:
             my_ip = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
@@ -44,18 +50,19 @@ def get_cached_urls(urls):
 
 def create_dht_node():
     nodefile =  os.path.join(os.getcwd(), 'dht.nodes')
-    config = ConfigParser.ConfigParser(allow_no_value=True)
-    config.read(nodefile)
-    try:
-        port = int(config.items('port')[0][0])
-    except:
-        print "Error: Port information missing"
-        sys.exit()
-    try:
-        known_nodes = config.items('known_nodes')
-        known_nodes = [(k, int(v)) for (k, v) in known_nodes]
-    except:
-        known_nodes = []
+    with open(nodefile) as fp:
+        config = ConfigParser.ConfigParser(allow_no_value=True)
+        config.readfp(fp)
+        try:
+            port = int(config.items('port')[0][0])
+        except:
+            print "Error: Port information missing"
+            sys.exit()
+        try:
+            known_nodes = config.items('known_nodes')
+            known_nodes = [(k, int(v)) for (k, v) in known_nodes]
+        except:
+            known_nodes = []
 
     print "  * Starting the DHT in port {}".format(port)
     ret = dht.bootstrap_dht(port, known_nodes)
@@ -64,7 +71,7 @@ def create_dht_node():
 @searcher.route('/')
 @searcher.route('/index')
 def index():
-    global node
+    global node, result_v
     results = []
     entropies_dict = load_entropies()
     query = request.args.get('q')
@@ -78,24 +85,21 @@ def index():
         pear_details = []
         results = []
         if query_dist.size:
-            pears = get_result_from_dht(node, query_dist)
-            pear_profiles = read_pears(pears)
+            get_result_from_dht(node, query_dist)
+            pear_profiles = read_pears(result_v)
             pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
             pear_ips = pear_details.keys()
             results = scorePages.runScript(query, query_dist, pear_ips)
         if not pear_details or not results:
           pears = ['no pear found :(']
           scorePages.ddg_redirect(query)
-        elif not pears:
+        elif not result_v:
             try:
-              #print "Trying to contact ip.42.pl..."
-              pears = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
+              result_v = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
             except:
-              pears = ['0.0.0.0']
-        # '''remove the following lines after testing'''
-        # pages = [['http://test.com', 'test']]
+              result_v = ['0.0.0.0']
 
         results = get_cached_urls(results)
-        return render_template('results.html', pears=pears,
+        return render_template('results.html', pears=result_v,
                                query=query, results=results)
 

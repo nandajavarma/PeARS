@@ -137,7 +137,11 @@ def read_pears(pears):
             if ip == my_ip:
                 p = profile.vector
             else:
-                p = requests.get("http://{}:5000/api/profile".format(ip)).text
+                try:
+                    p = requests.get("http://{}:4000/api/profile".format(ip)).text
+                except:
+                    print "Error: No reply from the peer {}".format(ip)
+                    p = ''
             val = cStringIO.StringIO(str(p))
             pears_dict[ip] = numpy.loadtxt(val)
     return pears_dict
