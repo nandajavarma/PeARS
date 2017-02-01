@@ -43,7 +43,7 @@ def getValueCallback(result, key):
     elif type(result) == list:
         for cont in result:
             if type(cont) == Contact:
-                IPs.append(cont.address)#, cont.port))
+                IPs.append(str((cont.address,cont.port)))
     IPs = "0.0.0.0" if not IPs else IPs
     print 'Value successfully retrieved: %s' % IPs
     return IPs
@@ -102,16 +102,17 @@ def parse_arguments(args=None):
                 "contacts it).\n"
     return args
 
-def get_dht_value():
+def get_dht_value(port):
     vector = (Profile.query.all()[0]).vector
     vector = vector.strip('[]\n\t\r')
     peer_profile = np.array([np.float64(j) for j in vector.split(' ')])
     KEY = lsh(peer_profile)
     try:
-        VALUE = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
+        VALUE = str((urllib.urlopen('http://ip.42.pl/short').read().strip('\n'),
+                port))
     except:
         print "Unable to connect to the network. Setting up locally...\n"
-        VALUE = "0.0.0.0"
+        VALUE = str(("0.0.0.0", port))
     return KEY, VALUE
 
 def bootstrap_dht(port, known_nodes):
@@ -119,7 +120,7 @@ def bootstrap_dht(port, known_nodes):
         os.remove('/tmp/dbFile%s.db' % port)
     data_store = DictDataStore()
     node = EntangledNode(udpPort=int(port), dataStore=data_store)
-    KEY, VALUE = get_dht_value()
+    KEY, VALUE = get_dht_value(port)
     node.joinNetwork(known_nodes)
     node.iterativeStore(KEY, VALUE)
     reactor.addSystemEventTrigger('before','shutdown', cleanup, KEY, node)

@@ -246,6 +246,7 @@ class Node(object):
                     if len(result) > 0:
                         contact = result[0]
                         contact.store(key, value)
+
                     outerDf.callback({key: value})
                 else:
                     # Ok, value does not exist in DHT at all

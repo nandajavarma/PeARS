@@ -15,17 +15,18 @@ from pears.utils import read_pears, query_distribution, load_entropies, print_ti
 from pears import best_pears, scorePages, app, db
 from pears.models import Profile
 node = None
-result_v = None
+result_v = []
+port = None
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
 def printresult(result):
     global result_v
-    result_v = result
+    result_v = [literal_eval(r) for r in result]
 
 @print_timing
 def get_result_from_dht(node, query_dist):
-    global result_v
+    global port, result_v
     query_key = dht.lsh(query_dist)
     deferred = dht.getValue(node, query_key)
     deferred.addCallback(printresult)
@@ -33,9 +34,10 @@ def get_result_from_dht(node, query_dist):
         return result_v
     else:
         try:
-            my_ip = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
+            my_ip = [(urllib.urlopen('http://ip.42.pl/short').read().strip(
+                '\n'), port)]
         except:
-            my_ip = ["0.0.0.0"]
+            my_ip = [("0.0.0.0", port)]
         return my_ip
 
 def get_cached_urls(urls):
@@ -49,6 +51,7 @@ def get_cached_urls(urls):
   return urls_with_cache
 
 def create_dht_node():
+    global port
     nodefile =  os.path.join(os.getcwd(), 'dht.nodes')
     with open(nodefile) as fp:
         config = ConfigParser.ConfigParser(allow_no_value=True)
@@ -71,7 +74,7 @@ def create_dht_node():
 @searcher.route('/')
 @searcher.route('/index')
 def index():
-    global node, result_v
+    global node
     results = []
     entropies_dict = load_entropies()
     query = request.args.get('q')
@@ -85,21 +88,22 @@ def index():
         pear_details = []
         results = []
         if query_dist.size:
-            get_result_from_dht(node, query_dist)
-            pear_profiles = read_pears(result_v)
+            pears = get_result_from_dht(node, query_dist)
+            pear_profiles = read_pears(pears)
+            pears = [IP[0] for IP in pears]
             pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
             pear_ips = pear_details.keys()
             results = scorePages.runScript(query, query_dist, pear_ips)
         if not pear_details or not results:
           pears = ['no pear found :(']
           scorePages.ddg_redirect(query)
-        elif not result_v:
+        elif not pears:
             try:
-              result_v = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
+              pears = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
             except:
-              result_v = ['0.0.0.0']
+              pears = ['0.0.0.0']
 
         results = get_cached_urls(results)
-        return render_template('results.html', pears=result_v,
+        return render_template('results.html', pears=pears,
                                query=query, results=results)
 

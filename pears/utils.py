@@ -133,7 +133,7 @@ def read_pears(pears):
         val = cStringIO.StringIO(str(p))
         pears_dict[my_ip] = numpy.loadtxt(val)
     else:
-        for ip in pears:
+        for ip, port in pears:
             if ip == my_ip:
                 p = profile.vector
             else:
