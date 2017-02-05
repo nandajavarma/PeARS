@@ -38,17 +38,17 @@ def getValue(node, key):
 
 def getValueCallback(result, key):
     """ Callback function that is invoked when the getValue() operation succeeds """
-    IPs = []
-    callback_refs = []
+    IPs, addrs = [], []
     if type(result) == dict:
         IPs = [literal_eval(val) for val in result.values()]
-        IPs = [ip for ip, port in IPs]
+        addrs = IPs = [ip for ip, port in IPs]
     elif type(result) == list:
         for cont in result:
             if type(cont) == Contact:
                 IPs.append(cont)
+                addrs.append(cont.address)
     IPs = ["0.0.0.0"] if not IPs else IPs
-    # print 'Value successfully retrieved: %s' % IPs
+    print 'Value successfully retrieved: %s' % (addrs or IPs)
     return IPs
 
 def lsh(vector):
