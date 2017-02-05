@@ -4,6 +4,7 @@
 import os, sys, time
 import re
 from flask import render_template, request, Blueprint
+from dht.entangled.kademlia.contact import Contact
 import requests, json, urllib2, urllib
 from ast import literal_eval
 from dht import dht
@@ -80,21 +81,27 @@ def index():
         results = []
         if query_dist.size:
             get_result_from_dht(node, query_dist)
-            time.sleep(1)
             global result_v
+            time.sleep(1)
             pear_profiles = read_pears(result_v)
             pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
             results = scorePages.runScript(query, query_dist, result_v)
         if not pear_details or not results:
           pears = ['no pear found :(']
           scorePages.ddg_redirect(query)
-        elif not pears:
+        elif not result_v:
             try:
               pears = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
             except:
               pears = ['0.0.0.0']
 
         results = get_cached_urls(results)
+        pears = []
+        for ret in result_v:
+            if type(ret) == Contact:
+                pears.append(ret.address)
+            else:
+                pears.append(ret)
         return render_template('results.html', pears=pears,
                                query=query, results=results)
 

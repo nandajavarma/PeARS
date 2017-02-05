@@ -146,7 +146,6 @@ def read_pears(pears):
         my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
     except:
         my_ip = "0.0.0.0"
-    global pears_dict
     if not pears:
         p = profile.vector
         val = cStringIO.StringIO(str(p))
@@ -154,7 +153,7 @@ def read_pears(pears):
     else:
         for cont in pears:
             if not type(cont) == Contact:
-                if cont == 'my_ip':
+                if cont == my_ip:
                     p = profile.vector
                     val = cStringIO.StringIO(str(p))
                     pears_dict[my_ip] = numpy.loadtxt(val)
@@ -166,7 +165,7 @@ def read_pears(pears):
                 df.addCallback(printresult, cont.address)
                 df.addErrback(errorprint, my_ip)
 
-    time.sleep(1)
+                time.sleep(1)
 
     return pears_dict
 

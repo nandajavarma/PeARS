@@ -123,7 +123,6 @@ def output(best_urls, url_titles, url_wordclouds):
     return results
 
 def printres(result):
-    print result
     global urls
     urls =  result
 
@@ -145,7 +144,7 @@ def get_pear_urls(contact):
         df = ret(rawResponse=True)
         df.addCallback(printres)
         df.addErrback(noconnection)
-    time.wait(1)
+        time.wait(1)
     return urls
 
 def runScript(query, query_dist, pears):

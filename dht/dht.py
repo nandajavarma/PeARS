@@ -11,6 +11,7 @@ from entangled.kademlia.datastore import DictDataStore
 from entangled.kademlia.contact import Contact
 from pears.models import Profile
 import numpy as np
+from ast import literal_eval
 
 
 def genericErrorCallback(failure):
@@ -40,8 +41,8 @@ def getValueCallback(result, key):
     IPs = []
     callback_refs = []
     if type(result) == dict:
-        IPs = result.values()
-        IPs = [ip for ip, port in result.values()]
+        IPs = [literal_eval(val) for val in result.values()]
+        IPs = [ip for ip, port in IPs]
     elif type(result) == list:
         for cont in result:
             if type(cont) == Contact:
