@@ -1,6 +1,7 @@
 import os, cStringIO
 import time, requests, urllib2, numpy
 from sqlalchemy.types import PickleType
+from dht.entangled.kademlia.contact import Contact
 import getpass
 import socket
 
@@ -16,6 +17,18 @@ stopwords = ["", "(", ")", "a", "about", "an", "and", "are", "around", "as", "at
              "what", "when", "where", "who", "will", "with", "you", "your"]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+pears_dict = {}
+
+# For debug purposes.
+def tracefunc(frame, event, arg, indent=[0]):
+      if event == "call":
+          indent[0] += 2
+          print "-" * indent[0] + "> call function", frame.f_code.co_name
+      elif event == "return":
+          print "<" + "-" * indent[0], "exit function", frame.f_code.co_name
+          indent[0] -= 2
+      return tracefunc
+
 
 def print_timing(func):
     """ Timing function, just to know how long things take """
@@ -112,38 +125,49 @@ def query_distribution(query, entropies):
     vbase = normalise(vbase)
     return vbase
 
-def getIP():
-  my_ip = '0.0.0.0'
-  try:
-    my_ip = urllib2.urlopen('http://ip.42.pl/short', timeout = 2).read().strip('\n')
-  except:
-    print "Unable to find IP..."
-    #urllib2.URLError, e:
-    #raise Exception("There was an error: %r" % e)
-  return my_ip
+def printresult(result, ip):
+    global pears_dict
+    vector = result[0].response[0]
+    val = cStringIO.StringIO(str(vector))
+    pears_dict[ip] = numpy.loadtxt(val)
+
+def errorprint(result, ip):
+    global pears_dict
+    vector = (Profile.query.all()[0]).vector
+    val = cStringIO.StringIO(str(vector))
+    pears_dict[ip] = numpy.loadtxt(val)
+
 
 @print_timing
 def read_pears(pears):
+    global pears_dict
     profile = Profile.query.first()
-    my_ip = "0.0.0.0"
-    my_ip = getIP()
-    pears_dict = {}
+    try:
+        my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
+    except:
+        my_ip = "0.0.0.0"
+    global pears_dict
     if not pears:
         p = profile.vector
         val = cStringIO.StringIO(str(p))
         pears_dict[my_ip] = numpy.loadtxt(val)
     else:
-        for ip, port in pears:
-            if ip == my_ip:
-                p = profile.vector
+        for cont in pears:
+            if not type(cont) == Contact:
+                if cont == 'my_ip':
+                    p = profile.vector
+                    val = cStringIO.StringIO(str(p))
+                    pears_dict[my_ip] = numpy.loadtxt(val)
+                else:
+                    pass
             else:
-                try:
-                    p = requests.get("http://{}:4000/api/profile".format(ip)).text
-                except:
-                    print "Error: No reply from the peer {}".format(ip)
-                    p = ''
-            val = cStringIO.StringIO(str(p))
-            pears_dict[ip] = numpy.loadtxt(val)
+                ret = getattr(cont, 'getProfile')
+                df = ret(rawResponse=True)
+                df.addCallback(printresult, cont.address)
+                df.addErrback(errorprint, my_ip)
+
+    time.sleep(1)
+
     return pears_dict
 
 

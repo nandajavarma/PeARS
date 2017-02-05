@@ -19,6 +19,7 @@ import protocol
 import twisted.internet.reactor
 import twisted.internet.threads
 from contact import Contact
+from pears.models import Urls
 
 def rpcmethod(func):
     """ Decorator to expose Node methods as remote procedure calls
@@ -303,12 +304,33 @@ class Node(object):
         return df
 
     @rpcmethod
+    def getProfile(self):
+        """ Used to verify contact between two Kademlia nodes
+
+        @rtype: str
+        """
+        filename = 'profile_file'
+        profile = Profile.query.all()
+        with open(filename, 'w') as f:
+                f.write(str(profile))
+        return open(filename)
+
+    @rpcmethod
     def ping(self):
         """ Used to verify contact between two Kademlia nodes
 
         @rtype: str
         """
         return 'pong'
+
+    @rpcmethod
+    def getUrls(self):
+        """ Used to verify contact between two Kademlia nodes
+
+        @rtype: str
+        """
+        urls = Urls.query.all()
+        return str([u.__dict__ for u in urls])
 
     @rpcmethod
     def store(self, key, value, originalPublisherID=None, age=0, **kwargs):

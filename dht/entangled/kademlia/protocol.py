@@ -106,15 +106,16 @@ class KademliaProtocol(protocol.DatagramProtocol):
                 del self._partialMessages[msgID]
             else:
                 return
+
         try:
             msgPrimitive = self._encoder.decode(datagram)
         except encoding.DecodeError:
             # We received some rubbish here
             return
-        
+
         message = self._translator.fromPrimitive(msgPrimitive)
         remoteContact = Contact(message.nodeID, address[0], address[1], self)
-        
+
         # Refresh the remote node's details in the local node's k-buckets
         self._node.addContact(remoteContact)
 
@@ -162,7 +163,7 @@ class KademliaProtocol(protocol.DatagramProtocol):
     def _send(self, data, rpcID, address):
         """ Transmit the specified data over UDP, breaking it up into several
         packets if necessary
-        
+
         If the data is spread over multiple UDP datagrams, the packets have the
         following structure::
             |           |     |      |      |        ||||||||||||   0x00   |
@@ -170,11 +171,11 @@ class KademliaProtocol(protocol.DatagramProtocol):
             | type ID   | of packets |of this packet |          | indicator|
             | (1 byte)  | (2 bytes)  |  (2 bytes)    |(20 bytes)| (1 byte) |
             |           |     |      |      |        ||||||||||||          |
-        
+
         @note: The header used for breaking up large data segments will
                possibly be moved out of the KademliaProtocol class in the
                future, into something similar to a message translator/encoder
-               class (see C{kademlia.msgformat} and C{kademlia.encoding}). 
+               class (see C{kademlia.msgformat} and C{kademlia.encoding}).
         """
         if len(data) > self.msgSizeLimit:
             # We have to spread the data over multiple UDP datagrams, and provide sequencing information
@@ -292,7 +293,7 @@ class KademliaProtocol(protocol.DatagramProtocol):
 
     def stopProtocol(self):
         """ Called when the transport is disconnected.
-        
+
         Will only be called once, after all ports are disconnected.
         """
         for key in self._callLaterList.keys():

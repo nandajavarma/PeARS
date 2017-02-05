@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+import os, sys, time
 import re
 from flask import render_template, request, Blueprint
 import requests, json, urllib2, urllib
@@ -22,7 +22,7 @@ root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
 def printresult(result):
     global result_v
-    result_v = [literal_eval(r) for r in result]
+    result_v = [r for r in result]
 
 @print_timing
 def get_result_from_dht(node, query_dist):
@@ -30,15 +30,6 @@ def get_result_from_dht(node, query_dist):
     query_key = dht.lsh(query_dist)
     deferred = dht.getValue(node, query_key)
     deferred.addCallback(printresult)
-    if result_v:
-        return result_v
-    else:
-        try:
-            my_ip = [(urllib.urlopen('http://ip.42.pl/short').read().strip(
-                '\n'), port)]
-        except:
-            my_ip = [("0.0.0.0", port)]
-        return my_ip
 
 def get_cached_urls(urls):
   urls_with_cache = urls
@@ -88,12 +79,12 @@ def index():
         pear_details = []
         results = []
         if query_dist.size:
-            pears = get_result_from_dht(node, query_dist)
-            pear_profiles = read_pears(pears)
-            pears = [IP[0] for IP in pears]
+            get_result_from_dht(node, query_dist)
+            time.sleep(1)
+            global result_v
+            pear_profiles = read_pears(result_v)
             pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
-            pear_ips = pear_details.keys()
-            results = scorePages.runScript(query, query_dist, pear_ips)
+            results = scorePages.runScript(query, query_dist, result_v)
         if not pear_details or not results:
           pears = ['no pear found :(']
           scorePages.ddg_redirect(query)

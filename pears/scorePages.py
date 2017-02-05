@@ -13,11 +13,15 @@ import socket
 import math
 import numpy
 from ast import literal_eval
+import time
+
 
 from overlap_calculation import score_url_overlap, generic_overlap
 from .utils import query_distribution, cosine_similarity, print_timing
 from .models import Urls
 import cStringIO
+
+urls = None
 
 @print_timing
 def scoreDS(query_dist, pear_urls):
@@ -118,18 +122,31 @@ def output(best_urls, url_titles, url_wordclouds):
         results = []
     return results
 
+def printres(result):
+    print result
+    global urls
+    urls =  result
+
+def noconnection(result):
+    print "nothing"
+
 @print_timing
-def get_pear_urls(ip):
+def get_pear_urls(contact):
+    global urls
     try:
         my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
     except:
         my_ip = "0.0.0.0"
-    if ip == my_ip:
+    if not hasattr(contact, 'address') or contact.address == my_ip:
         urls = Urls.query.all()
         return [u.__dict__ for u in urls]
     else:
-        return literal_eval(requests.get(
-            "http://{}:5000/api/urls".format(ip)).text)
+        ret = getattr(contact, 'getUrls')
+        df = ret(rawResponse=True)
+        df.addCallback(printres)
+        df.addErrback(noconnection)
+    time.wait(1)
+    return urls
 
 def runScript(query, query_dist, pears):
     url_wordclouds = {}
