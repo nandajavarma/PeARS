@@ -136,11 +136,8 @@ def local_url_search(query, query_dist):
     return output(best_urls, wordclouds, titles)
 
 def printresult(result):
-    print result
-    # global best_urls
-    # urls = ''.join(literal_eval(result[0].response)).split('http')
-    # val = ['http' + url for url in filter(None, urls)]
-    # best_urls.extend(val)
+    global results
+    results.extend(literal_eval(result[0].response))
 
 def errorfunc(failure):
     """ Callback function that is invoked if an error occurs during any of the DHT operations """
@@ -162,7 +159,7 @@ def runScript(query, query_dist, pears, my_ip):
             deferred = func(str(query), str(query_dist), rawResponse=True)
             deferred.addCallback(printresult)
             deferred.addErrback(errorfunc)
-    time.sleep(1)
+        time.sleep(2)
     return return_updated_data()
 
 

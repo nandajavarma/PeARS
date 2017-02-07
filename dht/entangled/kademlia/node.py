@@ -335,13 +335,8 @@ class Node(object):
             '[]\n\r').split(' '))]
         query_dist = numpy.asarray(vector)
 
-        # filename = 'urls_file'
-        # with open(filename, 'w') as f:
-                # f.write(str(local_url_search(query, query_dist)))
-        # return open(filename)
-
-
-        return str(scorePages.local_url_search(query, query_dist))
+        val = scorePages.local_url_search(query, query_dist)
+        return str(val)
 
     @rpcmethod
     def store(self, key, value, originalPublisherID=None, age=0, **kwargs):
