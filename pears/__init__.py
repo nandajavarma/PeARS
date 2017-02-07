@@ -11,7 +11,7 @@ app.config.from_object('config')
 
 
 
-from pears import models, searcher, indexer, api
+from pears import models, searcher, indexer, api, scorePages
 
 app.register_blueprint(searcher.searcher)
 app.register_blueprint(indexer.indexer)

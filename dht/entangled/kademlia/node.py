@@ -20,6 +20,8 @@ import twisted.internet.reactor
 import twisted.internet.threads
 from contact import Contact
 from pears.models import Urls
+from pears import scorePages
+import numpy, cStringIO
 
 def rpcmethod(func):
     """ Decorator to expose Node methods as remote procedure calls
@@ -324,17 +326,22 @@ class Node(object):
         return 'pong'
 
     @rpcmethod
-    def getUrls(self):
+    def getUrls(self, query, query_dist, *args):
         """ Used to verify contact between two Kademlia nodes
 
         @rtype: str
         """
-        urls = Urls.query.all()
-        filename = 'urls_file'
+        vector =[float(i) for i in filter(None, query_dist.strip(
+            '[]\n\r').split(' '))]
+        query_dist = numpy.asarray(vector)
 
-        with open(filename, 'w') as f:
-                f.write(str([u.__dict__ for u in urls]))
-        return open(filename)
+        # filename = 'urls_file'
+        # with open(filename, 'w') as f:
+                # f.write(str(local_url_search(query, query_dist)))
+        # return open(filename)
+
+
+        return str(scorePages.local_url_search(query, query_dist))
 
     @rpcmethod
     def store(self, key, value, originalPublisherID=None, age=0, **kwargs):

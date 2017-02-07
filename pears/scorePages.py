@@ -22,6 +22,8 @@ from .models import Urls
 import cStringIO
 
 urls = None
+results = []
+
 
 @print_timing
 def scoreDS(query_dist, pear_urls):
@@ -115,46 +117,53 @@ def output(best_urls, url_titles, url_wordclouds):
     # If documents matching the query were found on the pear network...
     if len(best_urls) > 0:
         for u in best_urls:
-            results.append([u, url_titles[u], url_wordclouds[u]])
+            try:
+                results.append([u, url_titles[u], url_wordclouds[u]])
+            except:
+                results.append([u, '', ''])
 
     # Otherwise, open duckduckgo and send the query there
     else:
         results = []
     return results
 
-def printres(result):
-    global urls
-    urls =  result
 
-def noconnection(result):
-    print "nothing"
+def local_url_search(query, query_dist):
+    urls = Urls.query.all()
+    pear_urls = [u.__dict__ for u in urls]
+    document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
+    best_urls = bestURLs(document_scores)
+    return output(best_urls, wordclouds, titles)
 
-@print_timing
-def get_pear_urls(contact, my_ip):
-    global urls
-    if not hasattr(contact, 'address') or contact.address in [my_ip, "0.0.0.0"]:
-        urls = Urls.query.all()
-        return [u.__dict__ for u in urls]
-    else:
-        ret = getattr(contact, 'getUrls')
-        df = ret(rawResponse=True)
-        df.addCallback(printres)
-        df.addErrback(noconnection)
-        time.wait(1)
-    return urls
+def printresult(result):
+    print result
+    # global best_urls
+    # urls = ''.join(literal_eval(result[0].response)).split('http')
+    # val = ['http' + url for url in filter(None, urls)]
+    # best_urls.extend(val)
+
+def errorfunc(failure):
+    """ Callback function that is invoked if an error occurs during any of the DHT operations """
+    print 'An error has occurred:', failure.getErrorMessage()
+    reactor.callLater(0, stop)
+
+def return_updated_data():
+    global results
+    return results
 
 def runScript(query, query_dist, pears, my_ip):
-    url_wordclouds = {}
-    url_titles = {}
-    best_urls = []
+    global results
     for pear in pears:
-        pear_urls = get_pear_urls(pear, my_ip)
-        document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
-        #document_scores, wordclouds = scoreDS(query_dist, pear_urls)  # without URL overlap
-        url_wordclouds.update(wordclouds)
-        url_titles.update(titles)
-        best_urls = bestURLs(document_scores)
-    return output(best_urls, url_titles, url_wordclouds)
+        if not hasattr(pear, 'address') or pear.address in [my_ip, "0.0.0.0"]:
+            results.extend(local_url_search(query,
+                    query_dist))
+        else:
+            func = getattr(pear, 'getUrls')
+            deferred = func(str(query), str(query_dist), rawResponse=True)
+            deferred.addCallback(printresult)
+            deferred.addErrback(errorfunc)
+    time.sleep(1)
+    return return_updated_data()
 
 
 if __name__ == '__main__':

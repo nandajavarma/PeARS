@@ -168,7 +168,7 @@ def read_pears(pears, node, my_ip):
                 df = ret(rawResponse=True)
                 df.addCallback(printresult, cont.address)
                 df.addErrback(errorprint, my_ip)
-                time.sleep(1)
+            time.sleep(1)
 
 
             pears_bk.append(cont)
