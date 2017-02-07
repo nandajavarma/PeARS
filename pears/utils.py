@@ -2,8 +2,10 @@ import os, cStringIO
 import time, requests, urllib2, numpy
 from sqlalchemy.types import PickleType
 from dht.entangled.kademlia.contact import Contact
+from dht.entangled.kademlia.protocol import KademliaProtocol
 import getpass
 import socket
+import hashlib, random
 
 from numpy import linalg, array, dot, sqrt, math
 
@@ -139,35 +141,40 @@ def errorprint(result, ip):
 
 
 @print_timing
-def read_pears(pears):
+def read_pears(pears, node, my_ip):
+    pears_bk = []
     global pears_dict
     profile = Profile.query.first()
-    try:
-        my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
-    except:
-        my_ip = "0.0.0.0"
     if not pears:
         p = profile.vector
         val = cStringIO.StringIO(str(p))
         pears_dict[my_ip] = numpy.loadtxt(val)
     else:
         for cont in pears:
-            if not type(cont) == Contact:
-                if cont == my_ip:
+            p = None
+            if not isinstance(cont, Contact):
+                if cont[0] in [my_ip, "0.0.0.0"]:
                     p = profile.vector
                     val = cStringIO.StringIO(str(p))
                     pears_dict[my_ip] = numpy.loadtxt(val)
-                else:
-                    pass
-            else:
+
+                hash = hashlib.sha1()
+                hash.update(str(random.getrandbits(255)))
+                id =  hash.digest()
+                cont = Contact(id, cont[0], cont[1],
+                        node._protocol)
+            if isinstance(cont, Contact) and not p:
                 ret = getattr(cont, 'getProfile')
                 df = ret(rawResponse=True)
                 df.addCallback(printresult, cont.address)
                 df.addErrback(errorprint, my_ip)
-
                 time.sleep(1)
 
-    return pears_dict
+
+            pears_bk.append(cont)
+
+    pears_bk = pears if not pears_bk else pears_bk
+    return pears_dict, pears_bk
 
 
 def get_unknown_word(word):

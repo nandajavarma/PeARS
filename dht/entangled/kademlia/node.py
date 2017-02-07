@@ -330,7 +330,11 @@ class Node(object):
         @rtype: str
         """
         urls = Urls.query.all()
-        return str([u.__dict__ for u in urls])
+        filename = 'urls_file'
+
+        with open(filename, 'w') as f:
+                f.write(str([u.__dict__ for u in urls]))
+        return open(filename)
 
     @rpcmethod
     def store(self, key, value, originalPublisherID=None, age=0, **kwargs):

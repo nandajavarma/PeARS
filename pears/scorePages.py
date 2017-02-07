@@ -130,13 +130,9 @@ def noconnection(result):
     print "nothing"
 
 @print_timing
-def get_pear_urls(contact):
+def get_pear_urls(contact, my_ip):
     global urls
-    try:
-        my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
-    except:
-        my_ip = "0.0.0.0"
-    if not hasattr(contact, 'address') or contact.address == my_ip:
+    if not hasattr(contact, 'address') or contact.address in [my_ip, "0.0.0.0"]:
         urls = Urls.query.all()
         return [u.__dict__ for u in urls]
     else:
@@ -147,12 +143,12 @@ def get_pear_urls(contact):
         time.wait(1)
     return urls
 
-def runScript(query, query_dist, pears):
+def runScript(query, query_dist, pears, my_ip):
     url_wordclouds = {}
     url_titles = {}
     best_urls = []
     for pear in pears:
-        pear_urls = get_pear_urls(pear)
+        pear_urls = get_pear_urls(pear, my_ip)
         document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
         #document_scores, wordclouds = scoreDS(query_dist, pear_urls)  # without URL overlap
         url_wordclouds.update(wordclouds)

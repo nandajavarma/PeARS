@@ -40,16 +40,16 @@ def getValueCallback(result, key):
     """ Callback function that is invoked when the getValue() operation succeeds """
     IPs, addrs = [], []
     if type(result) == dict:
-        IPs = [literal_eval(val) for val in result.values()]
-        addrs = IPs = [ip for ip, port in IPs]
+        addrs = [literal_eval(val) for val in result.values()]
+        IPs = [ip for ip, port in addrs]
     elif type(result) == list:
         for cont in result:
             if type(cont) == Contact:
-                IPs.append(cont)
-                addrs.append(cont.address)
-    IPs = ["0.0.0.0"] if not IPs else IPs
-    print 'Value successfully retrieved: %s' % (addrs or IPs)
-    return IPs
+                addrs.append(cont)
+                IPs.append(cont.address)
+    addrs = [("0.0.0.0", 4000)] if not addrs else addrs
+    print 'Value successfully retrieved: %s' % (IPs or addrs)
+    return addrs
 
 def lsh(vector):
     alpha.seek(0)
@@ -114,7 +114,7 @@ def get_dht_value(port):
         VALUE = str((urllib.urlopen('http://ip.42.pl/short').read().strip('\n'),
                 port))
     except:
-        print "Unable to connect to the network. Setting up locally...\n"
+        print "\nWarning: Unable to connect to the network. Setting up locally...\n"
         VALUE = str(("0.0.0.0", port))
     return KEY, VALUE
 

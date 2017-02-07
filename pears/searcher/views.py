@@ -63,6 +63,12 @@ def create_dht_node():
     ret = dht.bootstrap_dht(port, known_nodes)
     return ret
 
+def get_my_ip():
+    try:
+        return urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
+    except:
+        return "0.0.0.0"
+
 @searcher.route('/')
 @searcher.route('/index')
 def index():
@@ -75,7 +81,7 @@ def index():
     if not query:
         return render_template("index.html")
     else:
-        #print "Making query distribution..."
+        my_ip = get_my_ip()
         query_dist = query_distribution(query, entropies_dict)
         pear_details = []
         results = []
@@ -83,25 +89,25 @@ def index():
             get_result_from_dht(node, query_dist)
             global result_v
             time.sleep(1)
-            pear_profiles = read_pears(result_v)
-            pear_details = best_pears.find_best_pears(query_dist, pear_profiles)
-            results = scorePages.runScript(query, query_dist, result_v)
+            pear_profiles, contacts = read_pears(result_v, node, my_ip)
+            pear_details, contacts = best_pears.find_best_pears(query_dist,
+                    pear_profiles, contacts)
+
+            results = scorePages.runScript(query, query_dist, contacts,
+                    my_ip)
         if not pear_details or not results:
-          pears = ['no pear found :(']
-          scorePages.ddg_redirect(query)
-        elif not result_v:
-            try:
-              pears = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
-            except:
-              pears = ['0.0.0.0']
+            pears = ['no pear found :(']
+            scorePages.ddg_redirect(query)
+        elif not contacts:
+            pears = [my_ip]
 
         results = get_cached_urls(results)
         pears = []
-        for ret in result_v:
+        for ret in contacts:
             if type(ret) == Contact:
                 pears.append(ret.address)
             else:
-                pears.append(ret)
+                pears.append(ret[0])
         return render_template('results.html', pears=pears,
                                query=query, results=results)
 
