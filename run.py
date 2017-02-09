@@ -30,9 +30,6 @@ def parse_args(args):
     return port, known_nodes
 
 
-def storeresult(result):
-    config.node = result
-
 def main(args, tcp_port):
     port, known_nodes = parse_args(args)
     known_nodes = filter(None, known_nodes)

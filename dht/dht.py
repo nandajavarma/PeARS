@@ -106,7 +106,14 @@ def parse_arguments(args=None):
     return args
 
 def get_dht_value(port):
-    vector = (Profile.query.all()[0]).vector
+    try:
+        vector = (Profile.query.all()[0]).vector
+    except:
+        print "\nError: Local pear profile missing. Try again after "\
+                                                "indexing "
+
+        reactor.callLater(0, stop)
+        sys.exit(0)
     vector = vector.strip('[]\n\t\r')
     peer_profile = np.array([np.float64(j) for j in vector.split(' ')])
     KEY = lsh(peer_profile)
