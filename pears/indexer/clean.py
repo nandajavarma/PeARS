@@ -33,7 +33,7 @@ def list_duplicates(urls):
     for url2 in urls:
       if url2 != url1:
         u2 = url2.url
-        if u1 != "" and u2 != "":
+        if u1 != "" and u2 != "" and u1 != u2:
           if generic_overlap(u1,u2) > 0.9:
             print "Possible duplicates:",u1,u2
             to_remove = select_url(url1,url2)
@@ -57,6 +57,20 @@ def remove_duplicates():
     print "Deleting",u.url,"..."
     Urls.query.filter_by(url=u.url).delete()
     db.session.commit()
+
+
+def clean_cache():
+  cached_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk("./html_cache/") for f in filenames]
+  for r in cached_files:
+    url1=r.replace("./html_cache","http:/")
+    url2=r.replace("./html_cache","https:/")
+    if not db.session.query(Urls).filter_by(url=url1).all() and not db.session.query(Urls).filter_by(url=url2).all():
+      print r,"is not in database! Deleting cached file..."
+      os.remove(r)
+    dir = re.sub("[^\/]*$","",r)
+    if not os.listdir(dir):
+      print dir,"is empty: removing directory..."
+      os.rmdir(dir)
 
 def runScript():
   print "Now cleaning up... removing duplicates..."

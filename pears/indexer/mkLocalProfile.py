@@ -68,7 +68,6 @@ def createProfile(profile, pear_dist, topics_s, coh):
 
 
 def runScript():
-    #runDistSemWeighted.runScript()
     print "Computing pear for local history..."
     profile = Profile.query.first()
     if not profile:

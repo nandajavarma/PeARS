@@ -86,7 +86,7 @@ def index_history(num_pages):
   cursor = firefox_db.cursor()
 
   # get the list of all visited places via firefox browser
-  cursor.execute("SELECT * FROM 'moz_places' ORDER BY visit_count DESC")
+  cursor.execute("SELECT * FROM 'moz_places' ORDER BY last_visit_date DESC")
   rows = cursor.fetchall()
 
   urls_to_process = record_urls_to_process(rows, int(num_pages))
