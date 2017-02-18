@@ -15,7 +15,8 @@ home_directory = os.path.expanduser('~')
 def mk_ignore():
     #A small ignore list for sites that don't need indexing.
     ignore=["twitter", "google", "duckduckgo", "bing", "yahoo", "facebook",
-            "mail.google.com", "whatsapp", "telegram"]
+            "mail.google.com", "whatsapp", "telegram", "0.0.0.5000",
+            "localhost"]
     '''Make ignore list'''
     s = []
     for i in ignore:
@@ -61,7 +62,7 @@ def record_urls_to_process(db_urls, num_pages):
                         url_with_www = url
                     if not db.session.query(Urls).filter_by(url=url).all():
                       urls_to_process.append(url)
-                      print "...writing",url,"..."
+                      #print "...writing",url,"to process..."
                       i+=1
                     else:
                       print url,"is already known..."
@@ -98,18 +99,18 @@ def index_from_file(filename):
   f = open(filename,'r')
   urls_to_process = []
   for url in f:
-    url = url.rstrip('\n')
+    url = unicode(url.rstrip('\n'))
     www_url = xowa.local_to_www(url)
     if not db.session.query(Urls).filter_by(url=www_url).all():
       urls_to_process.append(url)
-      print "...to process:",url,"..."
-    else:
-      print url,"is already known..."
+      #print "...to process:",url,"..."
+    #else:
+      #print url,"is already known..."
   return urls_to_process
 
 def index_url(urls_to_process, cache):
     for url in urls_to_process:
-        print "Indexing '{}'\n".format(url)
+        print "\nAttempting to index '{}'".format(url)
         if ".pdf" in url:
           drows = pdfparser.extract_from_url(url,cache)
         else:

@@ -12,7 +12,7 @@ from urlparse import urlparse, urljoin
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
 def write_html_to_cache(html, cached_page):
-  print "Writing to",cached_page,"..."
+  #print "Writing to",cached_page,"..."
   cache = codecs.open(cached_page,'w', encoding='utf8')
   html = html.replace('</head>','<link rel="stylesheet" type="text/css" href="'+root_dir+'/static/css/offline.css"/>\n</head>')
   cache.write(unicode(html))
@@ -36,18 +36,21 @@ def cache_file(url,html):
 
 def cache_pdf(url):
   '''Write pdf in local cache directory'''
-  url_parsed = urlparse(url)
-  path_dirs = url_parsed.path.rstrip('/')[1:].split('/')
-  page = path_dirs[-1]
-  cached_netloc = "./html_cache/"+url_parsed.netloc
-  cached_dir = cached_netloc+"/"+'/'.join(path_dirs[:-1])+"/"
-  if not os.path.isdir(cached_dir):
-    os.makedirs(cached_dir)
-  cached_page = cached_dir+page
-  if not os.path.exists(cached_page):
-    response = requests.get(url)
-    with open(cached_page, 'wb') as f:
-      f.write(response.content)
+  try:
+    url_parsed = urlparse(url)
+    path_dirs = url_parsed.path.rstrip('/')[1:].split('/')
+    page = path_dirs[-1]
+    cached_netloc = "./html_cache/"+url_parsed.netloc
+    cached_dir = cached_netloc+"/"+'/'.join(path_dirs[:-1])+"/"
+    if not os.path.isdir(cached_dir):
+      os.makedirs(cached_dir)
+    cached_page = cached_dir+page
+    if not os.path.exists(cached_page):
+      response = requests.get(url)
+      with open(cached_page, 'wb') as f:
+        f.write(response.content)
+  except:
+    print "Error caching the pdf..."
 
 
 def get_images(url):

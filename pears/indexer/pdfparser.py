@@ -16,30 +16,30 @@ import sys
 def convert_pdf_to_txt(url):
   try:
     open = urllib2.urlopen(Request(url)).read()
+
+    memory_file = StringIO(open)
+    parser = PDFParser(memory_file)
+    document = PDFDocument(parser)
+
+    rsrcmgr = PDFResourceManager()
+    retstr = StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+
+    for page in PDFPage.create_pages(document):
+      interpreter.process_page(page)
+
+    text = retstr.getvalue()
+
+    device.close()
+    retstr.close()
   except:
-    print "Error accessing the file"
+    print "Error accessing/parsing the PDF file"
     return ""
-
-  memory_file = StringIO(open)
-  parser = PDFParser(memory_file)
-  document = PDFDocument(parser)
-
-  rsrcmgr = PDFResourceManager()
-  retstr = StringIO()
-  codec = 'utf-8'
-  laparams = LAParams()
-
-  device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
-
-  interpreter = PDFPageInterpreter(rsrcmgr, device)
-
-  for page in PDFPage.create_pages(document):
-    interpreter.process_page(page)
-
-  text = retstr.getvalue()
-
-  device.close()
-  retstr.close()
   return text
 
 def extract_from_url(url, cache):

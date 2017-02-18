@@ -56,7 +56,7 @@ def computePearDist():
     # coh=0
     coh = coherence(vecs_for_coh)
     # print coh
-    return vbase, dist_str, coh
+    return vbase, unicode(dist_str), coh
 
 
 def createProfile(profile, pear_dist, topics_s, coh):
@@ -68,13 +68,15 @@ def createProfile(profile, pear_dist, topics_s, coh):
 
 
 def runScript():
-    print "Computing pear for local history..."
+    print "\nComputing pear for local history..."
     profile = Profile.query.first()
     if not profile:
         user = getpass.getuser()
         profile = Profile(name=unicode(user))
     v, print_v, coh = computePearDist()
-    topics, topics_s = sim_to_matrix(v, 20)
+    #For now, remove topics. They take too long to compute!
+    #topics, topics_s = sim_to_matrix(v, 20)
+    topics, topics_s = [], ""
     createProfile(profile, print_v, topics_s, coh)
 
 
