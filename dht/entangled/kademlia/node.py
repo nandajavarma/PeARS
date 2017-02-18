@@ -19,7 +19,7 @@ import protocol
 import twisted.internet.reactor
 import twisted.internet.threads
 from contact import Contact
-from pears.models import Urls
+from pears.models import Urls, Profile
 from pears import scorePages
 import numpy, cStringIO
 
