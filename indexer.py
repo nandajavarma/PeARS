@@ -13,7 +13,7 @@ Options:
 --cache       Cache the text of each indexed page for offline browsing
 """
 
-from pears.indexer import retrieve_raw_data,hierarchClustering,mkLocalProfile
+from pears.indexer import retrieve_raw_data,hierarchClustering,mkLocalProfile,clean
 from docopt import docopt
 import os, sys
 
@@ -36,3 +36,4 @@ if __name__=="__main__":
       hierarchClustering.runScript(0.7)
 
   mkLocalProfile.runScript()
+  clean.runScript()

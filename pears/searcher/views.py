@@ -11,11 +11,12 @@ from . import searcher
 
 from pears import best_pears
 from pears import scorePages
-from pears.utils import read_pears, query_distribution, load_entropies
+from pears.utils import read_pears, query_distribution, load_entropies, print_timing
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
+@print_timing
 def get_result_from_dht(query_dist):
     #print "Checking dht..."
     #return False
@@ -50,6 +51,7 @@ def index():
     if not query:
         return render_template("index.html")
     else:
+        #print "Making query distribution..."
         query_dist = query_distribution(query, entropies_dict)
         pear_details = []
         results = []
@@ -64,6 +66,7 @@ def index():
           scorePages.ddg_redirect(query)
         elif not pears:
             try:
+              #print "Trying to contact ip.42.pl..."
               pears = [urllib.urlopen('http://ip.42.pl/short').read().strip('\n')]
             except:
               pears = ['0.0.0.0']

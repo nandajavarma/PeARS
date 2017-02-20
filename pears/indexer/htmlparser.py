@@ -16,21 +16,20 @@ def extract_from_url(url, cache):
     try:
       req = requests.get(unicode(url), allow_redirects=True, timeout=20)
     except (requests.exceptions.SSLError or requests.exceptions.Timeout) as e:
-      print "\nCaught the exception: {0}. Trying with http...\n".format(str(e))
+      #print "\nCaught the exception: {0}. Trying with http...\n".format(str(e))
       url = unicode(url.replace("https", "http"))
       req = requests.get(url, allow_redirects=True)
     except requests.exceptions.RequestException as e:
-      print "Ignoring {0} because of error {1}\n".format(url, str(e))
+      #print "Ignoring {0} because of error {1}\n".format(url, str(e))
+      print "Ignoring {0} because of error...\n".format(url)
       return
     except requests.exceptions.HTTPError as err:
-      print str(err)
+      #print str(err)
       return
     req.encoding = 'utf-8'
     if req.status_code is not 200:
       print "Warning: "  + str(req.url) + ' has a status code of: ' \
         + str(req.status_code) + ' omitted from database.\n'
-    if cache:
-      caching.runScript(url,unicode(req.text))
     bs_obj = BeautifulSoup(unicode(req.text),"lxml")
     if hasattr(bs_obj.title, 'string') & (req.status_code == requests.codes.ok):
       try:
@@ -57,9 +56,11 @@ def extract_from_url(url, cache):
       except None:
         title = u'Untitled'
         #print "Processed",url,"..."
+    if cache:
+      caching.runScript(url,unicode(req.text))
     return drows
     # can't connect to the host
   except:
     error = sys.exc_info()[0]
-    print "Error - %s" % error
+    #print "Error - %s" % error
 
