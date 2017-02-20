@@ -14,6 +14,7 @@ import math
 import numpy
 from ast import literal_eval
 import time
+from twisted.internet import defer
 
 
 from overlap_calculation import score_url_overlap, generic_overlap
@@ -135,9 +136,8 @@ def local_url_search(query, query_dist):
     best_urls = bestURLs(document_scores)
     return output(best_urls, titles, wordclouds)
 
-def printresult(result):
-    global results
-    results.extend(literal_eval(result[0].response))
+def printresult(result, cont):
+    return { cont: literal_eval(result[0].response)}
 
 def errorfunc(failure):
     """ Callback function that is invoked if an error occurs during any of the DHT operations """
@@ -148,19 +148,21 @@ def return_updated_data():
     global results
     return results
 
-def runScript(query, query_dist, pears, my_ip):
-    global results
+def runScript(result, query, query_dist, my_ip):
+    pears = result.keys()
+    _dlist = []
     for pear in pears:
         if not hasattr(pear, 'address') or pear.address in [my_ip, "0.0.0.0"]:
-            results.extend(local_url_search(query,
-                    query_dist))
+            df = defer.Deferred()
+            output = local_url_search(query, query_dist)
+            df.callback({pear: output})
         else:
             func = getattr(pear, 'getUrls')
-            deferred = func(str(query), str(query_dist), rawResponse=True)
-            deferred.addCallback(printresult)
-            deferred.addErrback(errorfunc)
-        time.sleep(2)
-    return return_updated_data()
+            df = func(str(query), str(query_dist), rawResponse=True)
+            df.addCallback(printresult, pear)
+            df.addErrback(errorfunc)
+        _dlist.append(df)
+    return defer.DeferredList(_dlist)
 
 
 if __name__ == '__main__':

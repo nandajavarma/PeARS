@@ -21,25 +21,21 @@ port = None
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 root_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
 
-def printresult(result):
-    global result_v
-    result_v = [r for r in result]
-
 @print_timing
 def get_result_from_dht(node, query_dist):
     global port, result_v
     query_key = dht.lsh(query_dist)
     deferred = dht.getValue(node, query_key)
-    deferred.addCallback(printresult)
+    return deferred
 
 def get_cached_urls(urls):
   urls_with_cache = urls
   for u in urls_with_cache:
-    cache = re.sub(r"http\:\/\/|https\:\/\/", root_dir+"/html_cache/", u[0])
-    if os.path.exists(cache):
-      u.append("file://"+cache)
-    else:
-      u.append(u[0])
+      cache = re.sub(r"http\:\/\/|https\:\/\/", root_dir+"/html_cache/", u[0])
+      if os.path.exists(cache):
+        u.append("file://"+cache)
+      else:
+        u.append(u[0])
   return urls_with_cache
 
 def create_dht_node():
@@ -69,11 +65,35 @@ def get_my_ip():
     except:
         return "0.0.0.0"
 
+def format_output(results):
+    pears = []
+    urls = []
+    if not results:
+        pears = ['no pear found :(']
+        scorePages.ddg_redirect(query)
+        return pears, urls
+    for each in results:
+        pears.extend(each[-1].keys())
+        urls.extend(each[-1].values())
+
+    if not pears or not urls:
+        return pears, urls
+    results = get_cached_urls(urls[0])
+    ips = []
+    for ret in pears:
+        if type(ret) == Contact:
+            ips.append(ret.address)
+        else:
+            ips.append(ret[0])
+    return ips, results
+
+
 @searcher.route('/')
 @searcher.route('/index')
 def index():
     global node
     results = []
+    pears = []
     entropies_dict = load_entropies()
     query = request.args.get('q')
     if not node:
@@ -84,30 +104,16 @@ def index():
         my_ip = get_my_ip()
         query_dist = query_distribution(query, entropies_dict)
         pear_details = []
-        results = []
         if query_dist.size:
-            get_result_from_dht(node, query_dist)
-            global result_v
-            time.sleep(1)
-            pear_profiles, contacts = read_pears(result_v, node, my_ip)
-            pear_details, contacts = best_pears.find_best_pears(query_dist,
-                    pear_profiles, contacts)
+            deferred = get_result_from_dht(node, query_dist)
+            deferred.addCallback(read_pears, node, my_ip)
+            deferred.addCallback(best_pears.find_best_pears, query_dist)
 
-            results = scorePages.runScript(query, query_dist, contacts,
-                    my_ip)
-        if not pear_details or not results:
-            pears = ['no pear found :(']
-            scorePages.ddg_redirect(query)
-        elif not contacts:
-            pears = [my_ip]
-
-        results = get_cached_urls(results)
-        pears = []
-        for ret in contacts:
-            if type(ret) == Contact:
-                pears.append(ret.address)
-            else:
-                pears.append(ret[0])
-        return render_template('results.html', pears=pears,
-                               query=query, results=results)
-
+            deferred.addCallback(scorePages.runScript, query,
+                    query_dist, my_ip)
+            deferred.addCallback(format_output)
+            if deferred.result:
+                pears = deferred.result[0]
+                results = deferred.result[-1]
+            return render_template('results.html', pears=pears,
+                                   query=query, results=results)

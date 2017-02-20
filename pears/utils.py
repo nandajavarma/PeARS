@@ -3,6 +3,7 @@ import time, requests, urllib2, numpy
 from sqlalchemy.types import PickleType
 from dht.entangled.kademlia.contact import Contact
 from dht.entangled.kademlia.protocol import KademliaProtocol
+from twisted.internet import defer
 import getpass
 import socket
 import hashlib, random
@@ -128,53 +129,57 @@ def query_distribution(query, entropies):
     return vbase
 
 def printresult(result, ip):
-    global pears_dict
     vector = result[0].response[0]
     val = cStringIO.StringIO(str(vector))
-    pears_dict[ip] = numpy.loadtxt(val)
+    return {ip: numpy.loadtxt(val)}
 
 def errorprint(result, ip):
-    global pears_dict
     vector = (Profile.query.all()[0]).vector
     val = cStringIO.StringIO(str(vector))
-    pears_dict[ip] = numpy.loadtxt(val)
+    return {ip: numpy.loadtxt(val)}
 
 
 @print_timing
 def read_pears(pears, node, my_ip):
-    pears_bk = []
-    global pears_dict
-    profile = Profile.query.first()
-    if not pears:
-        p = profile.vector
-        val = cStringIO.StringIO(str(p))
-        pears_dict[my_ip] = numpy.loadtxt(val)
-    else:
+    profile = Profile.query.all()[0]
+    local_search = False
+    _dlist = []
+    if pears:
         for cont in pears:
             p = None
             if not isinstance(cont, Contact):
-                if cont[0] in [my_ip, "0.0.0.0"]:
-                    p = profile.vector
-                    val = cStringIO.StringIO(str(p))
-                    pears_dict[my_ip] = numpy.loadtxt(val)
-
                 hash = hashlib.sha1()
                 hash.update(str(random.getrandbits(255)))
                 id =  hash.digest()
                 cont = Contact(id, cont[0], cont[1],
                         node._protocol)
+                if cont.address in [my_ip, "0.0.0.0"]:
+                    local_search = True
+                    p = profile.vector
+                    val = cStringIO.StringIO(str(p))
+                    df = defer.Deferred()
+                    df.callback({cont: numpy.loadtxt(val)})
             if isinstance(cont, Contact) and not p:
                 ret = getattr(cont, 'getProfile')
                 df = ret(rawResponse=True)
                 df.addCallback(printresult, cont.address)
                 df.addErrback(errorprint, my_ip)
-            time.sleep(1)
+            _dlist.append(df)
 
 
-            pears_bk.append(cont)
+    if not local_search:
+        p = profile.vector
+        val = cStringIO.StringIO(str(p))
+        hash = hashlib.sha1()
+        hash.update(str(random.getrandbits(255)))
+        id =  hash.digest()
+        cont = Contact(id, my_ip, 4000,
+                node._protocol)
+        df = defer.Deferred()
+        df.callback({cont: numpy.loadtxt(val)})
+        _dlist.append(df)
 
-    pears_bk = pears if not pears_bk else pears_bk
-    return pears_dict, pears_bk
+    return defer.DeferredList(_dlist)
 
 
 def get_unknown_word(word):

@@ -33,7 +33,10 @@ def get_pear_data(pear):
 
 
 @print_timing
-def find_best_pears(query_dist, pear_details, contacts, num_best_pears=5):
+def find_best_pears(result, query_dist, num_best_pears=5):
+    pear_details = {}
+    for ret in result:
+        pear_details.update(ret[-1])
     """ Finds num_best_pears pears data for query """
     best_pears_data = []
 
@@ -46,8 +49,5 @@ def find_best_pears(query_dist, pear_details, contacts, num_best_pears=5):
                 score = cosine_similarity(vector, query_dist)
             if not vector.size or isnan(score):
                 pear_details.pop(ip)
-                for cont in contacts:
-                    if cont.address == ip:
-                        contacts.remove(cont)
 
-    return pear_details, contacts
+    return pear_details
