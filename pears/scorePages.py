@@ -133,7 +133,7 @@ def local_url_search(query, query_dist):
     pear_urls = [u.__dict__ for u in urls]
     document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
     best_urls = bestURLs(document_scores)
-    return output(best_urls, wordclouds, titles)
+    return output(best_urls, titles, wordclouds)
 
 def printresult(result):
     global results
