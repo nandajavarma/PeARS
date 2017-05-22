@@ -17,3 +17,5 @@ sqlalchemy-migrate==0.10.0
 docopt==0.6.2
 langdetect==1.0.7
 pdfminer
+Twisted==16.4.1
+argparse==1.2.1

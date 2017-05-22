@@ -69,9 +69,17 @@ You can use script or the automatic installation instruc below. Automatic instal
 ###Running the PeARS search engine
 
 
-In the root directory of the repo, run
+To start the PeARS instance, in the root directory of the repo, run
 
 `python run.py`
+
+This will start a standalone PeARS instance that listens to the port
+4000 for UDP connections. If you already know an existing PeARS instance
+in a network and wants to join that network, run
+
+`python run.py <local UDP port> <IP address of the peer> <UDP port of the peer>`
+
+For more info, try `python run.py -h`.
 
 Go to the browser and type localhost:5000. You should find PeARS running there. We have provided a couple of demo pears for you to try. They of course only cover a tiny amount of pages and information. Try some queries related to food (e.g. `chocolate cake') or the enviromnent (e.g. `endangered species').
 

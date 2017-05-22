@@ -1,8 +1,12 @@
 import os, cStringIO
 import time, requests, urllib2, numpy
 from sqlalchemy.types import PickleType
+from dht.entangled.kademlia.contact import Contact
+from dht.entangled.kademlia.protocol import KademliaProtocol
+from twisted.internet import defer
 import getpass
 import socket
+import hashlib, random
 
 from numpy import linalg, array, dot, sqrt, math
 
@@ -16,6 +20,18 @@ stopwords = ["", "(", ")", "a", "about", "an", "and", "are", "around", "as", "at
              "what", "when", "where", "who", "will", "with", "you", "your"]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+pears_dict = {}
+
+# For debug purposes.
+def tracefunc(frame, event, arg, indent=[0]):
+      if event == "call":
+          indent[0] += 2
+          print "-" * indent[0] + "> call function", frame.f_code.co_name
+      elif event == "return":
+          print "<" + "-" * indent[0], "exit function", frame.f_code.co_name
+          indent[0] -= 2
+      return tracefunc
+
 
 def print_timing(func):
     """ Timing function, just to know how long things take """
@@ -112,35 +128,58 @@ def query_distribution(query, entropies):
     vbase = normalise(vbase)
     return vbase
 
-def getIP():
-  my_ip = '0.0.0.0'
-  try:
-    my_ip = urllib2.urlopen('http://ip.42.pl/short', timeout = 2).read().strip('\n')
-  except:
-    print "Unable to find IP..."
-    #urllib2.URLError, e:
-    #raise Exception("There was an error: %r" % e)
-  return my_ip
+def printresult(result, ip):
+    vector = result[0].response[0]
+    val = cStringIO.StringIO(str(vector))
+    return {ip: numpy.loadtxt(val)}
+
+def errorprint(result, ip):
+    vector = (Profile.query.all()[0]).vector
+    val = cStringIO.StringIO(str(vector))
+    return {ip: numpy.loadtxt(val)}
+
 
 @print_timing
-def read_pears(pears):
-    profile = Profile.query.first()
-    my_ip = "0.0.0.0"
-    my_ip = getIP()
-    pears_dict = {}
-    if not pears:
+def read_pears(pears, node, my_ip):
+    profile = Profile.query.all()[0]
+    local_search = False
+    _dlist = []
+    if pears:
+        for cont in pears:
+            p = None
+            if not isinstance(cont, Contact):
+                hash = hashlib.sha1()
+                hash.update(str(random.getrandbits(255)))
+                id =  hash.digest()
+                cont = Contact(id, cont[0], cont[1],
+                        node._protocol)
+                if cont.address in [my_ip, "0.0.0.0"]:
+                    local_search = True
+                    p = profile.vector
+                    val = cStringIO.StringIO(str(p))
+                    df = defer.Deferred()
+                    df.callback({cont: numpy.loadtxt(val)})
+            if isinstance(cont, Contact) and not p:
+                ret = getattr(cont, 'getProfile')
+                df = ret(rawResponse=True)
+                df.addCallback(printresult, cont.address)
+                df.addErrback(errorprint, my_ip)
+            _dlist.append(df)
+
+
+    if not local_search:
         p = profile.vector
         val = cStringIO.StringIO(str(p))
-        pears_dict[my_ip] = numpy.loadtxt(val)
-    else:
-        for ip in pears:
-            if ip == my_ip:
-                p = profile.vector
-            else:
-                p = requests.get("http://{}:5000/api/profile".format(ip)).text
-            val = cStringIO.StringIO(str(p))
-            pears_dict[ip] = numpy.loadtxt(val)
-    return pears_dict
+        hash = hashlib.sha1()
+        hash.update(str(random.getrandbits(255)))
+        id =  hash.digest()
+        cont = Contact(id, my_ip, 4000,
+                node._protocol)
+        df = defer.Deferred()
+        df.callback({cont: numpy.loadtxt(val)})
+        _dlist.append(df)
+
+    return defer.DeferredList(_dlist)
 
 
 def get_unknown_word(word):

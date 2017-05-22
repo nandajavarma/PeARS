@@ -12,11 +12,19 @@ from pears import db
 import socket
 import math
 import numpy
+from ast import literal_eval
+import time
+from twisted.internet import defer
+
 
 from overlap_calculation import score_url_overlap, generic_overlap
 from .utils import query_distribution, cosine_similarity, print_timing
 from .models import Urls
 import cStringIO
+
+urls = None
+results = []
+
 
 @print_timing
 def scoreDS(query_dist, pear_urls):
@@ -66,20 +74,20 @@ def scoreDocs(query, query_dist, pear_urls):
     URL_scores = scoreURL(query, pear_urls)
     title_scores = scoreTitles(query, pear_urls)
     for val in pear_urls:
-      v = val['url']
-      if v in DS_scores and v in URL_scores:
-        url_bonus = 0
-        title_bonus = 0
-        if URL_scores[v] > 0.7:
-          url_bonus = URL_scores[v] * 0.2
-        if title_scores[v] > 0.7:
-          title_bonus = title_scores[v] * 0.2
-        if DS_scores[v] > 0.2:
-          document_scores[v] = DS_scores[v] + url_bonus + title_bonus  # Boost DS score by a maximum of 0.2
-        else:
-          document_scores[v] = DS_scores[v]
-        if math.isnan(document_scores[v]):  # Check for potential NaN -- messes up with sorting in bestURLs.
-          document_scores[v] = 0
+        v = val['url']
+        if v in DS_scores and v in URL_scores:
+            url_bonus = 0
+            title_bonus = 0
+            if URL_scores[v] > 0.7:
+                url_bonus = URL_scores[v] * 0.2
+            if title_scores[v] > 0.7:
+                title_bonus = title_scores[v] * 0.2
+            if DS_scores[v] > 0.2:
+                document_scores[v] = DS_scores[v] + url_bonus + title_bonus  # Boost DS score by a maximum of 0.2
+            else:
+                document_scores[v] = DS_scores[v]
+            if math.isnan(document_scores[v]):  # Check for potential NaN -- messes up with sorting in bestURLs.
+                document_scores[v] = 0
     return document_scores, wordclouds, titles
 
 
@@ -110,37 +118,51 @@ def output(best_urls, url_titles, url_wordclouds):
     # If documents matching the query were found on the pear network...
     if len(best_urls) > 0:
         for u in best_urls:
-            results.append([u, url_titles[u], url_wordclouds[u]])
+            try:
+                results.append([u, url_titles[u], url_wordclouds[u]])
+            except:
+                results.append([u, '', ''])
 
     # Otherwise, open duckduckgo and send the query there
     else:
         results = []
     return results
 
-@print_timing
-def get_pear_urls(ip):
-    try:
-        my_ip = urllib.urlopen('http://ip.42.pl/short').read().strip('\n')
-    except:
-        my_ip = "0.0.0.0"
-    if ip == my_ip:
-        urls = Urls.query.all()
-        return [u.__dict__ for u in urls]
-    else:
-        return requests.get("http://{}:5000/api/urls".format(ip)).text
 
-def runScript(query, query_dist, pears):
-    url_wordclouds = {}
-    url_titles = {}
-    best_urls = []
+def local_url_search(query, query_dist):
+    urls = Urls.query.all()
+    pear_urls = [u.__dict__ for u in urls]
+    document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
+    best_urls = bestURLs(document_scores)
+    return output(best_urls, titles, wordclouds)
+
+def printresult(result, cont):
+    return { cont: literal_eval(result[0].response)}
+
+def errorfunc(failure):
+    """ Callback function that is invoked if an error occurs during any of the DHT operations """
+    print 'An error has occurred:', failure.getErrorMessage()
+    reactor.callLater(0, stop)
+
+def return_updated_data():
+    global results
+    return results
+
+def runScript(result, query, query_dist, my_ip):
+    pears = result.keys()
+    _dlist = []
     for pear in pears:
-        pear_urls = get_pear_urls(pear)
-        document_scores, wordclouds, titles = scoreDocs(query, query_dist, pear_urls)	#with URL overlap
-        #document_scores, wordclouds = scoreDS(query_dist, pear_urls)  # without URL overlap
-        url_wordclouds.update(wordclouds)
-        url_titles.update(titles)
-        best_urls = bestURLs(document_scores)
-    return output(best_urls, url_titles, url_wordclouds)
+        if not hasattr(pear, 'address') or pear.address in [my_ip, "0.0.0.0"]:
+            df = defer.Deferred()
+            output = local_url_search(query, query_dist)
+            df.callback({pear: output})
+        else:
+            func = getattr(pear, 'getUrls')
+            df = func(str(query), str(query_dist), rawResponse=True)
+            df.addCallback(printresult, pear)
+            df.addErrback(errorfunc)
+        _dlist.append(df)
+    return defer.DeferredList(_dlist)
 
 
 if __name__ == '__main__':

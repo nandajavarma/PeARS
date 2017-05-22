@@ -7,6 +7,14 @@ class OpenVectors(db.Model):
     word = db.Column(db.UnicodeText(64))
     vector = db.Column(db.Text)
 
+class DhtData(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    key = db.Column(db.UnicodeText())
+    lastPublished= db.Column(db.UnicodeText())
+    originallyPublished= db.Column(db.UnicodeText())
+    originalPublisherID= db.Column(db.UnicodeText())
+
+
 class Urls(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     url = db.Column(db.UnicodeText())
@@ -36,7 +44,8 @@ class Profile(db.Model):
     coherence = db.Column(db.Float)
     topics = db.Column(db.UnicodeText)
 
-    def __init__(self, name=None, vector=None, coherence=None, topics=None):
+    def __init__(self, name=None, vector=None, coherence=None,
+            topics=None):
         self.name = name
         self.vector = vector
         self.coherence = coherence
